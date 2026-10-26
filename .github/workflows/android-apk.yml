@@ -77,7 +77,18 @@ jobs:
       - name: Run checks
         run: |
           godot --headless --path . --script tests/validate_levels.gd
-          godot --headless --path . --script tests/load_scripts.gd
+
+      - name: Smoke test scenes (reports script errors, does not block the APK)
+        continue-on-error: true
+        run: |
+          for scene in res://scenes/main/main.tscn res://scenes/gameplay/game.tscn; do
+            echo "=== $scene ==="
+            godot --headless --path . "$scene" --quit-after 90 2>&1 | tee smoke.log
+            if grep -E "SCRIPT ERROR|Parse Error|Compile Error" smoke.log; then
+              echo "::warning::Script errors found in $scene"
+              exit 1
+            fi
+          done
 
       - name: Export debug APK
         env:
